@@ -2,16 +2,17 @@ library ieee;
 use ieee.std_logic_1164.all;
 use IEEE.STD_LOGIC_ARITH.ALL;
 use IEEE.STD_LOGIC_UNSIGNED.ALL;
+use IEEE.numeric_std.ALL;
 
 
 entity hlsm_elevator is
 
-port (clk, DrC: inout bit; rst: in bit; T, B : inout bit; Fo, Fc, MS, TMR: in bit; Up, Dn, Fl : in bit_vector (2 downto 0); LE, Q: inout bit_vector (2 downto 0));
+port (clk, DrC: inout bit; rst: in bit; T, B: inout bit; Fo, Fc, MS, TMR: in bit; Up, Dn, Fl : in bit_vector (2 downto 0); LE, Q: inout bit_vector (2 downto 0));
 end hlsm_elevator;
 
 architecture beh of hlsm_elevator is 
-	signal clk_half_period:time:=20ns;
-	type statetype is (init, waitState, openState,close, Acc, Const, Dec, stop);
+	signal clk_half_period:time:=10ns;
+	type statetype is (init, waitState, openState,close, Acc, Const, Dec, Stop);
 	signal currentstate, nextstate : statetype;
 	
 begin
@@ -30,6 +31,7 @@ begin
 	end process statereg;
 
 	comblogic: process(currentstate, T, B, Fo, Fc, DrC, MS, Up, Dn, Fl, TMR)
+	
 	begin
 
 	case currentstate is
@@ -39,19 +41,20 @@ begin
 	LE <= "000";
 	T <= '0';
 	B <= '0';
-		nextstate <= waitState;
+	DrC <= '0';
+	nextstate <= waitState;
 
-	-- waitState
+	-- wait
 	when waitState => 
 	
 	if (Fl'event) then
-	Q <= Fl;
+		Q <= Fl;
 	elsif (Up'event) then
-	Q <= Up;
+		Q <= Up;
 	elsif (Dn'event) then
-	Q <= Dn;
+		Q <= Dn;
 	else
-	Q <= "100";
+		--Q <= "100";
 	end if;
 	--if (Fl = "000" or Fl = "001" or Fl = "010" or Fl = "011") then
 	--Q <= Fl; 
@@ -60,6 +63,7 @@ begin
 	--elsif (Dn = "000" or Dn = "001" or Dn = "010" or Dn = "011")
 	--Q <= Dn;
 	--end if;
+
   	if (Q = LE) then
 		nextstate <= openState;
 	elsif (Q /= LE) and (Q /= "100") then
@@ -68,9 +72,12 @@ begin
 		nextstate <= waitState;
   	end if;
 	
-  	-- openState
+  	-- open
 	when openState =>
 	Q <= "100";
+	T <= '0';
+	B <= '0';
+	DrC <= '1';
   	if (TMR = '1' or Fc = '1') then
   		nextstate <= close;
   	elsif (MS = '1') then
@@ -88,35 +95,56 @@ begin
 
 	-- Acc
 	when Acc => 
-		T <= '0';
-		B <= '0';
 		nextstate <= Const;
 	 
-  	--Const
+  	--const
 	when Const => 
-	if (Q > LE) then --go Up floors
-		if(LE = "000")then LE <= "001";
-			if (Q = LE) then T <= '1';
+	
+	--while (Q /= LE) loop
+--		if (Q > LE) then -- go Up
+--			if(LE = "000") then LE <= "001";
+--				if(LE = "001") then T <= '1'; end if;
+--			elsif(Q = "001") then LE <= "010";
+--				if(LE = "010") then T <= '1'; end if;
+--			elsif(LE = "010") then LE <= "011"; -- T <= '1';
+--				if(LE = "011") then T <= '1'; end if;
+--			end if;
+--		elsif (Q < LE) then  --go Dn
+--			if(LE = "011") then LE <= "010";
+--				if(LE = Q) then B <= '1'; end if;
+--			elsif(LE = "010") then LE <= "001";
+--				if(LE = Q) then B <= '1'; end if;
+--			elsif(LE = "001") then LE <= "000";
+--				if(LE = Q) then B <= '1'; end if;
+--			end if;
+--		end if;
+	--end loop;
+
+		if (Q > LE) then -- go Up
+			if(LE = "000") then LE <= "001";				
+			elsif(LE = "001") then LE <= "010";
+			elsif(LE = "010") then LE <= "011";
 			end if;
-		elsif(LE = "001") then LE <= "010";
-			if (Q = LE) then T <= '1';
-			end if;
-		elsif(LE = "010") then LE <= "011";
-			if (Q = LE) then T <= '1';
+		elsif (Q < LE) then  --go Dn
+			if(LE = "011") then LE <= "010";
+			elsif(LE = "010") then LE <= "001";
+			elsif(LE = "001") then LE <= "000";
 			end if;
 		end if;
-	elsif not(Q > LE) then -- go Dn floors
-		if(LE = "011") then LE <= "010";
-			if (Q = LE) then B <= '1';
+
+		if (Q > LE) then -- go Up
+			if(LE = "001") then T <= '1';
+			elsif(LE = "010") then T <= '1';
+			elsif(LE = "011") then T <= '1'; 
 			end if;
-		elsif(LE = "010") then LE <= "001";
-			if (Q = LE) then B <= '1';
-			end if;
-		elsif(LE = "001") then LE <= "000";
-			if (Q = LE) then B <= '1';
+		elsif (Q < LE) then  --go Dn
+			if(LE = "010") then B <= '1';
+			elsif(LE = "001") then B <= '1';
+			elsif(LE = "000") then B <= '1'; 
 			end if;
 		end if;
-	end if;
+	
+	
 
 	if ((T = '1' or B = '1')) and (LE = Q) then
 		nextstate <= Dec;
@@ -126,15 +154,13 @@ begin
   
 	--Dec
 	when Dec => 
-	T <= '1';
-	B <= '1';
+	T <= '1'; B <= '1';
 	if (T = '1' and B = '1') then
-		nextstate <= stop;
+		nextstate <= Stop;
 	end if;
 
 	--stop
-	when stop => 
-		Q <= "100";
+	when Stop => 
 		nextstate <= openState;
   
  	end case;
@@ -155,7 +181,7 @@ architecture beh of hlsm_elevator_tb is
 
 component c1
 
-port (clk, DrC : inout bit; rst: in bit; T, B: inout bit; Fo, Fc, MS, TMR: in bit; Up, Dn, Fl: in bit_vector (2 downto 0); LE: inout bit_vector (2 downto 0));
+port (clk, DrC : inout bit; rst: in bit; T, B : inout bit; Fo, Fc, MS, TMR: in bit; Up, Dn, Fl: in bit_vector (2 downto 0); LE: inout bit_vector (2 downto 0));
 
 end component;
 
@@ -172,22 +198,25 @@ signal LEt: bit_vector (2 downto 0);
 signal Upt: bit_vector (2 downto 0);
 signal Flt: bit_vector (2 downto 0);
 signal Dnt: bit_vector (2 downto 0);
+--signal Trigger : bit;
 
 for all: c1 use entity work.hlsm_elevator(beh);
 
 begin
 g1: c1 port map(ct, DrCt, rt, Tt, Bt, Fot, Fct, MSt, TMRt, Upt, Dnt, Flt, LEt);
 	
-	
 	rt <= '0', '1' after 3000ns;
-	--Tt <= '0';
-	--Bt <= '0';
-	Fot <= '0';
-	Fct <= '0';
+	--Tt <= '0', '1' after 300ns;
+	--Bt <= '1', '1' after 1250ns;
+	Fot <= '0', '1' after 4500ns, '0' after 4750ns;
+	Fct <= '0', '1' after 4700ns;
 	MSt <= '0';
-	--TMRt <= '0';
-	Flt <= "100", "011" after 85ns, "000" after 100ns, "011" after 500ns;
-	Upt <= "100";
-	Dnt <= "100";
+	TMRt <= '0', '1' after 100ns, '0' after 125ns,'1' after 150ns, '0' after 250ns, '1' after 300ns, '0' after 350ns, '1' after 400ns, '0' after 450ns,'1' after 500ns;
+	Flt <= "100", "011" after 60ns;
+	Upt <= "100", "010" after 25500ns;
+	Dnt <= "100", "000" after 251000ns;
+
+	--Trigger <=  '0', '1' after 200ns, '0' after 250ns, '1' after 300ns, '0' after 350ns, '1' after 400ns, '0' after 450ns,'1' after 500ns;
+	
 
 end beh;
