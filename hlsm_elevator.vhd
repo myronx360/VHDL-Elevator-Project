@@ -7,11 +7,11 @@ use IEEE.numeric_std.ALL;
 
 entity hlsm_elevator is
 
-port (clk, DrC: inout bit; rst: in bit; T, B: inout bit; Fo, Fc, MS, TMR: in bit; Up, Dn, Fl : in bit_vector (2 downto 0); LE, Q: inout bit_vector (2 downto 0));
+port (clk, DrC: inout bit; rst: in bit; T, B: inout bit; Fo, Fc, MS, TMR: in bit; Up, Dn, Fl : in bit_vector (2 downto 0); LE, Q: inout bit_vector (2 downto 0); Fstart, Fstop: inout bit);
 end hlsm_elevator;
 
 architecture beh of hlsm_elevator is 
-	signal clk_half_period:time:=10ns;
+	signal clk_half_period:time:=5ns;
 	type statetype is (init, waitState, openState,close, Acc, Const, Dec, Stop);
 	signal currentstate, nextstate : statetype;
 	
@@ -30,7 +30,7 @@ begin
 		end if;
 	end process statereg;
 
-	comblogic: process(currentstate, T, B, Fo, Fc, DrC, MS, Up, Dn, Fl, TMR)
+	comblogic: process(currentstate, T, B, Fo, Fc, DrC, MS, Up, Dn, Fl, TMR, Fstart, Fstop)
 	
 	begin
 
@@ -74,13 +74,15 @@ begin
 	
   	-- open
 	when openState =>
-	Q <= "100";
+ 	Q <= "100";
 	T <= '0';
 	B <= '0';
 	DrC <= '1';
+	--Fstop <= '0';
+	--Fstart <= '0';
   	if (TMR = '1' or Fc = '1') then
   		nextstate <= close;
-  	elsif (MS = '1') then
+  	elsif (MS = '1' or Fo = '1') then
   		nextstate <= openState;
 	end if;
 	
@@ -95,8 +97,11 @@ begin
 
 	-- Acc
 	when Acc => 
-		nextstate <= Const;
-	 
+		if(Fstop = '1') then
+			nextstate <= Dec;
+		else
+			nextstate <= Const;
+	 	end if;
   	--const
 	when Const => 
 	
@@ -130,8 +135,11 @@ begin
 			end if;
 		elsif (Q < LE) then  --go Dn
 			if(LE = "011") then LE <= "010";
+				if(Q = "010") then B <= '1'; end if;
 			elsif(LE = "010") then LE <= "001";
+				if(Q = "010") then B <= '1'; end if;
 			elsif(LE = "001") then LE <= "000";
+				if(Q = "010") then B <= '1'; end if;
 			end if;
 		end if;
 		--if (LE = Q) then
@@ -165,6 +173,10 @@ begin
 
 	--stop
 	when Stop => 
+		if (Fstart = '1') then
+			--Fstop = '0';
+			nextstate <= Acc;
+		end if;
 		nextstate <= openState;
   
  	end case;
@@ -185,7 +197,7 @@ architecture beh of hlsm_elevator_tb is
 
 component c1
 
-port (clk, DrC : inout bit; rst: in bit; T, B : inout bit; Fo, Fc, MS, TMR: in bit; Up, Dn, Fl: in bit_vector (2 downto 0); LE: inout bit_vector (2 downto 0));
+port (clk, DrC : inout bit; rst: in bit; T, B : inout bit; Fo, Fc, MS, TMR: in bit; Up, Dn, Fl: in bit_vector (2 downto 0); LE: inout bit_vector (2 downto 0); Fstart, Fstop: inout bit);
 
 end component;
 
@@ -202,23 +214,24 @@ signal LEt: bit_vector (2 downto 0);
 signal Upt: bit_vector (2 downto 0);
 signal Flt: bit_vector (2 downto 0);
 signal Dnt: bit_vector (2 downto 0);
+signal Fstartt, Fstopt: bit;
 --signal Trigger : bit;
 
 for all: c1 use entity work.hlsm_elevator(beh);
 
 begin
-g1: c1 port map(ct, DrCt, rt, Tt, Bt, Fot, Fct, MSt, TMRt, Upt, Dnt, Flt, LEt);
+g1: c1 port map(ct, DrCt, rt, Tt, Bt, Fot, Fct, MSt, TMRt, Upt, Dnt, Flt, LEt, Fstartt, Fstopt);
 	
-	rt <= '0', '1' after 3000ns;
-	--Tt <= '0', '1' after 300ns;
-	--Bt <= '1', '1' after 1250ns;
+	rt <= '0', '1' after 5000ns;
 	Fot <= '0', '1' after 4500ns, '0' after 4750ns;
 	Fct <= '0', '1' after 4700ns;
+	--Fstartt <= '0';
+	--Fstopt <= '0';
 	MSt <= '0';
-	TMRt <= '0', '1' after 100ns, '0' after 125ns,'1' after 150ns, '0' after 250ns, '1' after 300ns, '0' after 350ns, '1' after 400ns, '0' after 450ns,'1' after 500ns;
-	Flt <= "100", "011" after 60ns;
-	Upt <= "100", "010" after 25500ns;
-	Dnt <= "100", "000" after 251000ns;
+	TMRt <= '0', '1' after 100ns, '0' after 125ns,'1' after 150ns, '0' after 250ns, '1' after 300ns, '0' after 350ns, '1' after 400ns, '0' after 450ns,'1' after 500ns,'0' after 550ns;
+	Upt <= "100", "011" after 60ns;
+	Flt <= "100", "010" after 225ns;
+	Dnt <= "100", "000" after 325ns;
 
 	--Trigger <=  '0', '1' after 200ns, '0' after 250ns, '1' after 300ns, '0' after 350ns, '1' after 400ns, '0' after 450ns,'1' after 500ns;
 	
