@@ -7,11 +7,11 @@ use IEEE.numeric_std.ALL;
 
 entity hlsm_elevator is
 
-port (clk, DrC: inout bit; rst: in bit; T, B: inout bit; Fo, Fc, MS, TMR: in bit; Up, Dn, Fl : in bit_vector (2 downto 0); LE, Q: inout bit_vector (2 downto 0); Fstart, Fstop: inout bit);
+port (clk, DrC: inout bit; rst: in bit; T, B: inout bit; Fo, Fc, MS, TMR: in bit; Up, Dn, Fl : in bit_vector (2 downto 0); LE, Q: inout bit_vector (2 downto 0); Fstart, Fstop: in bit);
 end hlsm_elevator;
 
 architecture beh of hlsm_elevator is 
-	signal clk_half_period:time:=5ns;
+	signal clk_half_period:time:=5 ns;
 	type statetype is (init, waitState, openState,close, Acc, Const, Dec, Stop);
 	signal currentstate, nextstate : statetype;
 	
@@ -35,6 +35,7 @@ begin
 	begin
 
 	case currentstate is
+
   	-- init
 	when init =>
 	Q <= "100";
@@ -56,13 +57,7 @@ begin
 	else
 		--Q <= "100";
 	end if;
-	--if (Fl = "000" or Fl = "001" or Fl = "010" or Fl = "011") then
-	--Q <= Fl; 
-	--elsif (Up = "000" or Up = "001" or Up = "010" or Up = "011")
-	--Q <= Up; 
-	--elsif (Dn = "000" or Dn = "001" or Dn = "010" or Dn = "011")
-	--Q <= Dn;
-	--end if;
+
 
   	if (Q = LE) then
 		nextstate <= openState;
@@ -81,7 +76,7 @@ begin
 	
 	--Fstop <= '0';
 	--Fstart <= '0';
-  	if (TMR = '1' or Fc = '1') then
+  	if (Fc = '1') then
   		nextstate <= close;
   	elsif (MS = '1' or Fo = '1') then
   		nextstate <= openState;
@@ -103,28 +98,9 @@ begin
 		else
 			nextstate <= Const;
 	 	end if;
+
   	--const
 	when Const => 
-	
-	--while (Q /= LE) loop
---		if (Q > LE) then -- go Up
---			if(LE = "000") then LE <= "001";
---				if(LE = "001") then T <= '1'; end if;
---			elsif(Q = "001") then LE <= "010";
---				if(LE = "010") then T <= '1'; end if;
---			elsif(LE = "010") then LE <= "011"; -- T <= '1';
---				if(LE = "011") then T <= '1'; end if;
---			end if;
---		elsif (Q < LE) then  --go Dn
---			if(LE = "011") then LE <= "010";
---				if(LE = Q) then B <= '1'; end if;
---			elsif(LE = "010") then LE <= "001";
---				if(LE = Q) then B <= '1'; end if;
---			elsif(LE = "001") then LE <= "000";
---				if(LE = Q) then B <= '1'; end if;
---			end if;
---		end if;
-	--end loop;
 
 		if (Q > LE) then -- go Up
 			if(LE = "000") then LE <= "001";
@@ -143,19 +119,7 @@ begin
 				if(Q = "000") then B <= '1'; end if;
 			end if;
 		end if;
-		--if (LE = Q) then
---			if (Q > LE) then  --go Up
---				if(LE = "001") then T <= '1';
---				elsif(LE = "010") then T <= '1';
---				elsif(LE = "011") then T <= '1'; 
---				end if;
---			elsif (Q < LE) then  --go Dn
---				if(LE = "010") then B <= '1';
---				elsif(LE = "001") then B <= '1';
---				elsif(LE = "000") then B <= '1'; 
---				end if;
---			end if;
-		--end if;
+
 	
 	
 
@@ -198,7 +162,7 @@ architecture beh of hlsm_elevator_tb is
 
 component c1
 
-port (clk, DrC : inout bit; rst: in bit; T, B : inout bit; Fo, Fc, MS, TMR: in bit; Up, Dn, Fl: in bit_vector (2 downto 0); LE: inout bit_vector (2 downto 0); Fstart, Fstop: inout bit);
+port (clk, DrC : inout bit; rst: in bit; T, B : inout bit; Fo, Fc, MS, TMR: in bit; Up, Dn, Fl: in bit_vector (2 downto 0); LE: inout bit_vector (2 downto 0);Fstart, Fstop: in bit);
 
 end component;
 
@@ -216,25 +180,43 @@ signal Upt: bit_vector (2 downto 0);
 signal Flt: bit_vector (2 downto 0);
 signal Dnt: bit_vector (2 downto 0);
 signal Fstartt, Fstopt: bit;
---signal Trigger : bit;
+
 
 for all: c1 use entity work.hlsm_elevator(beh);
 
 begin
 g1: c1 port map(ct, DrCt, rt, Tt, Bt, Fot, Fct, MSt, TMRt, Upt, Dnt, Flt, LEt, Fstartt, Fstopt);
-	
-	rt <= '0', '1' after 5000ns;
-	Fot <= '0', '1' after 4500ns, '0' after 4750ns;
-	Fct <= '0', '1' after 4700ns;
-	--Fstartt <= '0';
-	--Fstopt <= '0';
-	MSt <= '0';
-	TMRt <= '0', '1' after 100ns, '0' after 125ns,'1' after 150ns, '0' after 250ns, '1' after 300ns, '0' after 350ns, '1' after 400ns, '0' after 415ns,'0' after 550ns,'1' after 600ns,'0' after 650ns,'1' after 700ns;
-	Upt <= "100", "011" after 60ns, "100" after 80ns,"010" after 530ns;
-	Flt <= "100", "010" after 225ns, "100" after 245ns;
-	Dnt <= "100", "000" after 325ns, "100" after 345ns;
+	--------------------Basic Elevator----------------------------------------------
+--	rt <= '0', '1' after 5000 ns;
+--	Fot <= '0', '1' after 4500 ns, '0' after 4750 ns;
+--	Fct <= '0', '1' after 4700 ns;
+--	Fstartt <= '0';
+--	Fstopt <= '0';
+--	MSt <= '0';
+--	TMRt <= '0', '1' after 100 ns, '0' after 125 ns,'1' after 150 ns, '0' after 250 ns, '1' after 300 ns, '0' after 350 ns, '1' after 400 ns, '0' after 415 ns,'0' after 550 ns,'1' after 600 ns,'0' after 650 ns,'1' after 700 ns;
+--	Upt <= "100", "011" after 60 ns, "100" after 80 ns,"010" after 530 ns;
+--	Flt <= "100", "010" after 225 ns, "100" after 245 ns;
+--	Dnt <= "100", "000" after 325 ns, "100" after 345 ns;
 
-	--Trigger <=  '0', '1' after 200ns, '0' after 250ns, '1' after 300ns, '0' after 350ns, '1' after 400ns, '0' after 450ns,'1' after 500ns;
-	
+------------------------------ Force open and close Test--------------------------------------------
+	Fot <= '0', '1' after 4500 ns, '0' after 4750 ns;
+	Fct <= '0', '1' after 4700 ns;
+	Fstartt <= '0';
+	Fstopt <= '0';
+	MSt <= '0';
+	TMRt <= '0', '1' after 100 ns, '0' after 125 ns,'1' after 150 ns, '0' after 250 ns, '1' after 300 ns, '0' after 350 ns, '1' after 400 ns, '0' after 415 ns,'0' after 550 ns,'1' after 600 ns,'0' after 650 ns,'1' after 700 ns;
+	Upt <= "100", "011" after 60 ns, "100" after 80 ns,"010" after 530 ns;
+	Flt <= "100", "010" after 225 ns, "100" after 245 ns;
+	Dnt <= "100", "000" after 325 ns, "100" after 345 ns;
+------------------------------ Force Start and Stop Test--------------------------------------------
+	Fot <= '0', '1' after 4500 ns, '0' after 4750 ns;
+	Fct <= '0', '1' after 4700 ns;
+	Fstartt <= '0';
+	Fstopt <= '0';
+	MSt <= '0';
+	TMRt <= '0', '1' after 100 ns, '0' after 125 ns,'1' after 150 ns, '0' after 250 ns, '1' after 300 ns, '0' after 350 ns, '1' after 400 ns, '0' after 415 ns,'0' after 550 ns,'1' after 600 ns,'0' after 650 ns,'1' after 700 ns;
+	Upt <= "100", "011" after 60 ns, "100" after 80 ns,"010" after 530 ns;
+	Flt <= "100", "010" after 225 ns, "100" after 245 ns;
+	Dnt <= "100", "000" after 325 ns, "100" after 345 ns;
 
 end beh;
