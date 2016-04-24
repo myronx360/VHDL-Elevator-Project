@@ -121,9 +121,12 @@ begin
 	--end loop;
 
 		if (Q > LE) then -- go Up
-			if(LE = "000") then LE <= "001";				
+			if(LE = "000") then LE <= "001";
+				if(Q = "001") then T <= '1'; end if;			
 			elsif(LE = "001") then LE <= "010";
+				if(Q = "010") then T <= '1'; end if;
 			elsif(LE = "010") then LE <= "011";
+				if(Q = "011") then T <= '1'; end if;
 			end if;
 		elsif (Q < LE) then  --go Dn
 			if(LE = "011") then LE <= "010";
@@ -131,18 +134,19 @@ begin
 			elsif(LE = "001") then LE <= "000";
 			end if;
 		end if;
-
-		if (Q > LE) then -- go Up
-			if(LE = "001") then T <= '1';
-			elsif(LE = "010") then T <= '1';
-			elsif(LE = "011") then T <= '1'; 
-			end if;
-		elsif (Q < LE) then  --go Dn
-			if(LE = "010") then B <= '1';
-			elsif(LE = "001") then B <= '1';
-			elsif(LE = "000") then B <= '1'; 
-			end if;
-		end if;
+		--if (LE = Q) then
+--			if (Q > LE) then  --go Up
+--				if(LE = "001") then T <= '1';
+--				elsif(LE = "010") then T <= '1';
+--				elsif(LE = "011") then T <= '1'; 
+--				end if;
+--			elsif (Q < LE) then  --go Dn
+--				if(LE = "010") then B <= '1';
+--				elsif(LE = "001") then B <= '1';
+--				elsif(LE = "000") then B <= '1'; 
+--				end if;
+--			end if;
+		--end if;
 	
 	
 
