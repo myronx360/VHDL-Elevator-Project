@@ -47,11 +47,11 @@ begin
 	-- wait
 	when waitState => 
 	
-	if (Fl'event) then
+	if (Fl'event and Fl /= "100") then
 		Q <= Fl;
-	elsif (Up'event) then
+	elsif (Up'event and up /= "100") then
 		Q <= Up;
-	elsif (Dn'event) then
+	elsif (Dn'event and Dn /= "100") then
 		Q <= Dn;
 	else
 		--Q <= "100";
@@ -78,6 +78,7 @@ begin
 	T <= '0';
 	B <= '0';
 	DrC <= '1';
+	
 	--Fstop <= '0';
 	--Fstart <= '0';
   	if (TMR = '1' or Fc = '1') then
@@ -137,9 +138,9 @@ begin
 			if(LE = "011") then LE <= "010";
 				if(Q = "010") then B <= '1'; end if;
 			elsif(LE = "010") then LE <= "001";
-				if(Q = "010") then B <= '1'; end if;
+				if(Q = "001") then B <= '1'; end if;
 			elsif(LE = "001") then LE <= "000";
-				if(Q = "010") then B <= '1'; end if;
+				if(Q = "000") then B <= '1'; end if;
 			end if;
 		end if;
 		--if (LE = Q) then
@@ -228,10 +229,10 @@ g1: c1 port map(ct, DrCt, rt, Tt, Bt, Fot, Fct, MSt, TMRt, Upt, Dnt, Flt, LEt, F
 	--Fstartt <= '0';
 	--Fstopt <= '0';
 	MSt <= '0';
-	TMRt <= '0', '1' after 100ns, '0' after 125ns,'1' after 150ns, '0' after 250ns, '1' after 300ns, '0' after 350ns, '1' after 400ns, '0' after 450ns,'1' after 500ns,'0' after 550ns;
-	Upt <= "100", "011" after 60ns;
-	Flt <= "100", "010" after 225ns;
-	Dnt <= "100", "000" after 325ns;
+	TMRt <= '0', '1' after 100ns, '0' after 125ns,'1' after 150ns, '0' after 250ns, '1' after 300ns, '0' after 350ns, '1' after 400ns, '0' after 415ns,'0' after 550ns,'1' after 600ns,'0' after 650ns,'1' after 700ns;
+	Upt <= "100", "011" after 60ns, "100" after 80ns,"010" after 530ns;
+	Flt <= "100", "010" after 225ns, "100" after 245ns;
+	Dnt <= "100", "000" after 325ns, "100" after 345ns;
 
 	--Trigger <=  '0', '1' after 200ns, '0' after 250ns, '1' after 300ns, '0' after 350ns, '1' after 400ns, '0' after 450ns,'1' after 500ns;
 	
