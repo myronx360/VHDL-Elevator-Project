@@ -24,7 +24,14 @@ architecture beh of hlsm_elevator is
 	type statetype is (init, waitState, openState,close, Acc, Const, Dec, Stop);
 	signal currentstate, nextstate : statetype;
 	
-	
+	type mem is array (0 to 3) of bit_vector (2 downto 0); --first define the type of array.
+
+	signal queue : mem := (others=>(others=>'0')); --queue is a 4 element array of bit_vector (2 downto 0) others: fill array with '0'
+
+	--type mem is array (0 to 5) of bit_vector (2 downto 0);
+
+--	signal queue : mem := (others=>(others=>'0'));
+
 	
 begin
 	p1:process(clk)
@@ -40,14 +47,40 @@ begin
 		 currentstate <= nextstate;
 		end if;
 	end process statereg;
-		
+
+
+	
+	queue_design : process (clk,push,pull,din)
+	  
+	variable mem : bit_vector (2 downto 0) ;
+    	variable i : integer := 0;
+	    begin                   
+	        if (rising_edge (clk)) then
+	            if (push='1') then
+	                queue(i) <= din;  
+	                if (i<3) then
+	                    i := i + 1;       
+	                end if;
+	            elsif (pull='1') then   
+	                dout <= queue(0); 
+	                if (i>0) then
+	                    i := i - 1;
+	                end if;
+	                queue(0 to 2) <= queue(1 to 3);
+	            end if;
+	        end if;
+	    end process queue_design;
+
+	
 	comblogic: process(currentstate, T, B, Fo, Fc, DrC, MS, Up, Dn, Fl, TMR, Fstart, Fstop)
 	
 	variable IQ : integer := 0;
 	variable IElv1 : integer := 0;
 	variable IElv2 : integer := 0;
+	variable queueIndex : integer := 0;
 
 	begin
+	
 
 	case currentstate is
   	-- init
@@ -61,6 +94,10 @@ begin
 	Elv2 <= "000";
 	push <= '0';
 	pull <= '0';
+	queue(0) <= "100";
+	queue(1) <= "100";
+	queue(2) <= "100";
+	queue(3) <= "100";
 	nextstate <= waitState;
 
 	-- wait
@@ -68,19 +105,31 @@ begin
 	
 	if (Fl'event and Fl /= "100") then
 		Q <= Fl;
-		push <= '1';
 		din <= Fl;
+		push <= '1';
+--		if (queue(queueIndex) = "100") then
+--			queue(queueIndex) <= Fl;
+--			queueIndex := queueIndex + 1;
+--		end if;
 	end if;
 
 	if (Up'event and up /= "100") then
 		Q <= Up;
-		push <= '1';
 		din <= Up;
+		push <= '1';
+--		if (queue(0) = "100") then
+--			queue(0) <= Fl;
+--			queueIndex := queueIndex + 1;
+--		end if;
 	end if;
 	if (Dn'event and Dn /= "100") then
 		Q <= Dn;
-		push <= '1';
 		din <= Dn;
+		push <= '1';
+--		if (queue(queueIndex) = "100") then
+--			queue(queueIndex) <= Fl;
+--			queueIndex := queueIndex + 1;
+--		end if;
 	end if;
 	
 	if(Q = "000") then IQ := 0; end if;
@@ -243,19 +292,22 @@ port (clk, DrC : inout bit;
 	Fo, Fc, MS : in bit; 
 	TMR: inout bit; Up, Dn, Fl: in bit_vector (2 downto 0); 
 	LE: inout bit_vector (2 downto 0); 
-	Fstart, Fstop: inout bit);
+	Fstart, Fstop: inout bit;
+	push, pull: inout bit;
+	din, dout: inout bit_vector (2 downto 0)
+);
 
 end component;
 
-component queue
-port(
-         clk : in bit;
-         push : in bit;
-         pull : in bit;
-         din : in bit_vector (2 downto 0);
-         dout : out bit_vector(2 downto 0)
-         );
-end component;
+--component queue
+--port(
+--         clk : in bit;
+--         push : in bit;
+--         pull : in bit;
+--         din : in bit_vector (2 downto 0);
+--         dout : out bit_vector(2 downto 0)
+--         );
+--end component;
 
 signal ct : bit;
 signal DrCt: bit;
@@ -278,7 +330,7 @@ signal Fstartt, Fstopt: bit;
 	signal dint,doutt: bit_vector(2 downto 0);
 
 for all: c1 use entity work.hlsm_elevator(beh);
-for all: queue use entity work.queue_8nibble(queue_8nibble_arc);
+--for all: queue use entity work.queue_8nibble(queue_8nibble_arc);
 
 begin
 g1: c1 port map(ct, DrCt, rt, Tt, Bt, Fot, Fct, MSt, TMRt, Upt, Dnt, Flt, LEt, Fstartt, Fstopt);
@@ -296,50 +348,51 @@ g1: c1 port map(ct, DrCt, rt, Tt, Bt, Fot, Fct, MSt, TMRt, Upt, Dnt, Flt, LEt, F
 
 	--Trigger <=  '0', '1' after 200ns, '0' after 250ns, '1' after 300ns, '0' after 350ns, '1' after 400ns, '0' after 450ns,'1' after 500ns;
 	
-qu: queue port map (ct, pusht, pullt,dint,doutt);
-	
+--qu: queue port map (ct, pusht, pullt,dint,doutt);
+	--dint <= "010" after 60 ns;
+	--pusht <= '1' after 60 ns;
 
 end beh;
 
-use work.all;
-entity queue_8nibble is
-     port(
-         clk : in bit;
-         push : in bit;
-         pull : in bit;
-         din : in bit_vector (2 downto 0);
-         dout : out bit_vector(2 downto 0)
-         );
-end queue_8nibble;
+--use work.all;
+--entity queue_8nibble is
+--     port(
+--         clk : in bit;
+--         push : in bit;
+--         pull : in bit;
+--         din : in bit_vector (2 downto 0);
+--         dout : out bit_vector(2 downto 0)
+--         );
+--end queue_8nibble;
+--
+--
+--architecture queue_8nibble_arc of queue_8nibble is
+--
+--type mem is array (0 to 5) of bit_vector (2 downto 0);
+--
+--signal queue : mem := (others=>(others=>'0'));
+--
+--begin
 
-
-architecture queue_8nibble_arc of queue_8nibble is
-
-type mem is array (0 to 5) of bit_vector (2 downto 0);
-
-signal queue : mem := (others=>(others=>'0'));
-
-begin
-
-    queue_design : process (clk,push,pull,din) is   
-    variable mem : bit_vector (2 downto 0) ;
-    variable i : integer := 0;
-    begin                   
-        if (rising_edge (clk)) then
-            if (push='1') then
-                queue(i) <= din;  
-                if (i<5) then
-                    i := i + 1;       
-                end if;
-            elsif (pull='1') then   
-                dout <= queue(0); 
-                if (i>0) then
-                    i := i - 1;
-                end if;
-                queue(0 to 4) <= queue(1 to 5);
-            end if;
-        end if;
-    end process queue_design;
+--    queue_design : process (clk,push,pull,din) is   
+--    variable mem : bit_vector (2 downto 0) ;
+--    variable i : integer := 0;
+--    begin                   
+--        if (rising_edge (clk)) then
+--            if (push='1') then
+--                queue(i) <= din;  
+--                if (i<5) then
+--                    i := i + 1;       
+--                end if;
+--            elsif (pull='1') then   
+--                dout <= queue(0); 
+--                if (i>0) then
+--                    i := i - 1;
+--                end if;
+--                queue(0 to 4) <= queue(1 to 5);
+--            end if;
+--        end if;
+--    end process queue_design;
    
 
-end queue_8nibble_arc;
+--end queue_8nibble_arc;
