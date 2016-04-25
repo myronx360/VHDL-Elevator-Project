@@ -13,13 +13,18 @@ port (	clk, DrC: inout bit;
 	LE, Q: inout bit_vector (2 downto 0); 
 	Fstart, Fstop: inout bit;
 	Elv1, Elv2 : inout bit_vector (2 downto 0);
-	ElvSelected : inout bit);
+	ElvSelected : inout bit;
+	push, pull: inout bit;
+	din, dout: inout bit_vector (2 downto 0)
+	);
 end hlsm_elevator;
 
 architecture beh of hlsm_elevator is 
 	signal clk_half_period:time:=5 ns;
 	type statetype is (init, waitState, openState,close, Acc, Const, Dec, Stop);
 	signal currentstate, nextstate : statetype;
+	
+	
 	
 begin
 	p1:process(clk)
@@ -38,6 +43,10 @@ begin
 		
 	comblogic: process(currentstate, T, B, Fo, Fc, DrC, MS, Up, Dn, Fl, TMR, Fstart, Fstop)
 	
+	variable IQ : integer := 0;
+	variable IElv1 : integer := 0;
+	variable IElv2 : integer := 0;
+
 	begin
 
 	case currentstate is
@@ -50,6 +59,8 @@ begin
 	DrC <= '0';
 	Elv1 <= "000";
 	Elv2 <= "000";
+	push <= '0';
+	pull <= '0';
 	nextstate <= waitState;
 
 	-- wait
@@ -57,12 +68,44 @@ begin
 	
 	if (Fl'event and Fl /= "100") then
 		Q <= Fl;
-	elsif (Up'event and up /= "100") then
+		push <= '1';
+		din <= Fl;
+	end if;
+
+	if (Up'event and up /= "100") then
 		Q <= Up;
-	elsif (Dn'event and Dn /= "100") then
+		push <= '1';
+		din <= Up;
+	end if;
+	if (Dn'event and Dn /= "100") then
 		Q <= Dn;
+		push <= '1';
+		din <= Dn;
 	end if;
 	
+	if(Q = "000") then IQ := 0; end if;
+	if(Q = "001") then IQ := 1; end if;
+	if(Q = "010") then IQ := 2; end if;
+	if(Q = "011") then IQ := 3; end if;
+
+	if(Elv1 = "000") then IElv1 := 0; end if;
+	if(Elv1 = "001") then IElv1 := 1; end if;
+	if(Elv1 = "010") then IElv1 := 2; end if;
+	if(Elv1 = "011") then IElv1 := 3; end if;
+
+	if(Elv2 = "000") then IElv2 := 0; end if;
+	if(Elv2 = "001") then IElv2 := 1; end if;
+	if(Elv2 = "010") then IElv2 := 2; end if;
+	if(Elv2 = "011") then IElv2 := 3; end if;
+
+	if abs(IQ - IElv1) > abs(IQ - IElv2) then
+		ElvSelected <= '1';
+		nextstate <= Acc;
+	elsif abs(IQ - IElv1)< abs(IQ - IElv2) then
+		ElvSelected <= '0';
+		nextstate <= Acc;
+	end if;
+		
   	if (Q = Elv1) then
 		ElvSelected <= '0';
 		nextstate <= openState;
@@ -77,10 +120,12 @@ begin
 	
   	-- open
 	when openState =>
+	pull <= '1';
  	Q <= "100";
 	T <= '0';
 	B <= '0';
 	DrC <= '1';
+	push <= '0';
 	TMR <= '1' after 25 ns;
 	
 	--Fstop <= '0';
@@ -193,7 +238,12 @@ architecture beh of hlsm_elevator_tb is
 
 component c1
 
-port (clk, DrC : inout bit; rst: in bit; T, B : inout bit; Fo, Fc, MS : in bit; TMR: inout bit; Up, Dn, Fl: in bit_vector (2 downto 0); LE: inout bit_vector (2 downto 0); Fstart, Fstop: inout bit);
+port (clk, DrC : inout bit; 
+	rst: in bit; T, B : inout bit; 
+	Fo, Fc, MS : in bit; 
+	TMR: inout bit; Up, Dn, Fl: in bit_vector (2 downto 0); 
+	LE: inout bit_vector (2 downto 0); 
+	Fstart, Fstop: inout bit);
 
 end component;
 
@@ -222,9 +272,10 @@ signal Flt: bit_vector (2 downto 0);
 signal Dnt: bit_vector (2 downto 0);
 signal Fstartt, Fstopt: bit;
 --signal Trigger : bit;
+
 ------------queue signals----------------------
-signal pusht, pullt: bit; 
-signal dint,doutt: bit_vector(2 downto 0);
+	signal pusht, pullt: bit; 
+	signal dint,doutt: bit_vector(2 downto 0);
 
 for all: c1 use entity work.hlsm_elevator(beh);
 for all: queue use entity work.queue_8nibble(queue_8nibble_arc);
@@ -246,6 +297,7 @@ g1: c1 port map(ct, DrCt, rt, Tt, Bt, Fot, Fct, MSt, TMRt, Upt, Dnt, Flt, LEt, F
 	--Trigger <=  '0', '1' after 200ns, '0' after 250ns, '1' after 300ns, '0' after 350ns, '1' after 400ns, '0' after 450ns,'1' after 500ns;
 	
 qu: queue port map (ct, pusht, pullt,dint,doutt);
+	
 
 end beh;
 
