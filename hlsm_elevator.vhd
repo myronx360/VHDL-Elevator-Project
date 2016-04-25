@@ -94,10 +94,10 @@ begin
 	Elv2 <= "000";
 	push <= '0';
 	pull <= '0';
-	queue(0) <= "100";
-	queue(1) <= "100";
-	queue(2) <= "100";
-	queue(3) <= "100";
+--	queue(0) <= "100";
+--	queue(1) <= "100";
+--	queue(2) <= "100";
+--	queue(3) <= "100";
 	nextstate <= waitState;
 
 	-- wait
