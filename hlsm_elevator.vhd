@@ -106,7 +106,7 @@ begin
 	if (Fl'event and Fl /= "100") then
 		Q <= Fl;
 		din <= Fl;
-		push <= '1';
+		push <= '1', '0' after 10 ns;
 --		if (queue(queueIndex) = "100") then
 --			queue(queueIndex) <= Fl;
 --			queueIndex := queueIndex + 1;
@@ -116,7 +116,7 @@ begin
 	if (Up'event and up /= "100") then
 		Q <= Up;
 		din <= Up;
-		push <= '1';
+		push <= '1', '0' after 10 ns;
 --		if (queue(0) = "100") then
 --			queue(0) <= Fl;
 --			queueIndex := queueIndex + 1;
@@ -125,7 +125,7 @@ begin
 	if (Dn'event and Dn /= "100") then
 		Q <= Dn;
 		din <= Dn;
-		push <= '1';
+		push <= '1', '0' after 10 ns;
 --		if (queue(queueIndex) = "100") then
 --			queue(queueIndex) <= Fl;
 --			queueIndex := queueIndex + 1;
